@@ -283,17 +283,24 @@ trait Application {
     e match {
       case e: UsefulException => throw e
       case e: Throwable => {
-
-        val source = sources.flatMap(_.sourceFor(e))
-
-        throw new PlayException.ExceptionSource(
-          "Execution exception",
-          "[%s: %s]".format(e.getClass.getSimpleName, e.getMessage),
-          e) {
-          def line = source.flatMap(_._2).map(_.asInstanceOf[java.lang.Integer]).orNull
-          def position = null
-          def input = source.map(_._1).map(scalax.file.Path(_).string).orNull
-          def sourceName = source.map(_._1.getAbsolutePath).orNull
+        try {
+          val source = sources.flatMap(_.sourceFor(e))
+  
+          throw new PlayException.ExceptionSource(
+            "Execution exception",
+            "[%s: %s]".format(e.getClass.getSimpleName, e.getMessage),
+            e) {
+            def line = source.flatMap(_._2).map(_.asInstanceOf[java.lang.Integer]).orNull
+            def position = null
+            def input = source.map(_._1).map(scalax.file.Path(_).string).orNull
+            def sourceName = source.map(_._1.getAbsolutePath).orNull
+          }
+        } catch {
+          case e2: java.lang.InternalError =>
+            throw new PlayException(
+              "Execution exception",
+              "Also got an exception when retrieving source information",
+              e2)
         }
       }
     }
